@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using PayFlow.application.Crosscuttint;
 using PayFlow.application.Crosscuttint.Dtos.Request.Payments;
 using PayFlow.application.Crosscuttint.Dtos.Response.Payments;
-using PayFlow.application.Services;
+using PayFlow.application.Interfaces.Payment;
 
 namespace PayFlow.web.V1.Controllers.Pay
 {
@@ -12,9 +12,9 @@ namespace PayFlow.web.V1.Controllers.Pay
     [Route("v{version:apiVersion}/payment")]
     public class PaymentController : ControllerBase
     {
-        private readonly PaymentService _payFlowService;
+        private readonly IPaymentService _payFlowService;
 
-        public PaymentController(PaymentService payFlowService)
+        public PaymentController(IPaymentService payFlowService)
         {
             _payFlowService = payFlowService;
         }
