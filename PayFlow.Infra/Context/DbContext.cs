@@ -46,7 +46,7 @@ public class PayFlowDbContext : DbContext
                 .IsUnique();
 
             entity.HasMany(x => x.Payments)
-                .WithOne(x => x.Customer)
+                .WithOne(x => x.Customers)
                 .HasForeignKey(x => x.CustomerId);
         });
 
@@ -67,7 +67,7 @@ public class PayFlowDbContext : DbContext
             entity.Property(x => x.Description)
                 .HasMaxLength(500);
 
-            entity.HasOne(x => x.Customer)
+            entity.HasOne(x => x.Customers)
                 .WithMany(x => x.Payments)
                 .HasForeignKey(x => x.CustomerId);
 

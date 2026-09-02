@@ -1,14 +1,10 @@
 ﻿using Asp.Versioning;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using PayFlow.application.Crosscuttint;
 using PayFlow.application.Crosscuttint.Dtos;
 using PayFlow.application.Crosscuttint.Dtos.Request.Customers;
-using PayFlow.application.Crosscuttint.Dtos.Request.Payments;
 using PayFlow.application.Crosscuttint.Dtos.Response.Customers;
-using PayFlow.application.Crosscuttint.Dtos.Response.Payments;
 using PayFlow.application.Interfaces.Customer;
-using PayFlow.application.Services;
 
 namespace PayFlow.web.V1.Controllers.Customer
 {
@@ -48,7 +44,7 @@ namespace PayFlow.web.V1.Controllers.Customer
 
         [HttpGet]
         [Route("customers")]
-        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(Response<CustomersResponse>))]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(Response<IEnumerable<CustomersResponse>>))]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(SingleResponse))]
         public async Task<ActionResult<PaginationResponse<IEnumerable<CustomersResponse>>>> GetCustomersAsync(

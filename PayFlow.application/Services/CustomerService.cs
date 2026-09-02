@@ -56,7 +56,9 @@ public class CustomerService : ICustomerService
             throw new ExceptionValidation($"id inválido : {id}");
 
         var Customer = await _customerRepository.GetCustomerByIdAsync(id);
-        return _mapper.Map<CustomersResponse>(Customer);
+
+        var ret = _mapper.Map<CustomersResponse>(Customer);
+        return ret;
     }
 
     public async Task<PaginationResponse<IEnumerable<CustomersResponse>>> GetCustomersAsync(int? page, int? pageSize)

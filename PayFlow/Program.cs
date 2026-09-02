@@ -1,9 +1,10 @@
-using AutoMapper;
 using Asp.Versioning;
+using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using PayFlow.application.DI;
 using PayFlow.application.Mapping;
 using PayFlow.Infra.Context;
+using PayFlow.web.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -39,6 +40,8 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+app.UseMiddleware<ExceptionMiddleware>();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -46,6 +49,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
 
 app.UseAuthorization();
 

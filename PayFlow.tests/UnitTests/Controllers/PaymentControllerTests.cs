@@ -23,7 +23,7 @@ public sealed class PaymentControllerTests
         {
             CustomerId = 10,
             Amount = 500,
-            PaymentMethod = 1
+            PaymentMethodId = 1
         };
 
         var response = await _controller.AddPaymentAsync(request);

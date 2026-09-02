@@ -35,16 +35,17 @@ public class CustomerRepository : DbContext, ICustomerRepository
 
     public async Task<Customers> GetCustomerByIdAsync(int id)
     {
-        return await _context.Customers.Where(x => x.Id == id).FirstOrDefaultAsync();
+        return await _context.Customers.Include(x => x.Payments).FirstOrDefaultAsync(x => x.Id == id);
     }
+
     public async Task<int> CustomersCountAsync()
     {
-        return await _context.Customers.CountAsync();
+        return await _context.Customers.Include(x => x.Payments).CountAsync();
     }
 
     public async Task<IEnumerable<Customers>> GetCustomersAsync(int page, int pageSize)
     {
-        return await _context.Customers
+        return await _context.Customers.Include(x => x.Payments)
             .AsNoTracking()
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
@@ -71,7 +72,7 @@ public class CustomerRepository : DbContext, ICustomerRepository
 
     public async Task<bool> DeleteCustomerAsync(Customers request)
     {
-       _context.Customers.Remove(request);
+        _context.Customers.Remove(request);
 
         await _context.SaveChangesAsync();
 

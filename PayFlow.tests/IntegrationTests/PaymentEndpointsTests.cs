@@ -23,7 +23,7 @@ public sealed class PaymentEndpointsTests : IClassFixture<PayFlowWebApplicationF
         {
             CustomerId = 10,
             Amount = 500,
-            PaymentMethod = 1
+            PaymentMethodId = 1
         };
 
         var response = await _client.PostAsJsonAsync("/v1/payment/payments", request);
