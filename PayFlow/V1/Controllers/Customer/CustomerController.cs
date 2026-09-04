@@ -52,11 +52,11 @@ namespace PayFlow.web.V1.Controllers.Customer
             [FromQuery] int? pageSize)
         {
             var result = await _customerService.GetCustomersAsync(page, pageSize);
-            return Ok(new Response<PaginationResponse<IEnumerable<CustomersResponse>>> { result = result });
+            return Ok(new Response<IEnumerable<CustomersResponse>> { result = result.Resultado });
         }
 
         [HttpPut]
-        [Route("customer{id}")]
+        [Route("customer/{id}")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(Response<bool>))]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(SingleResponse))]
@@ -67,7 +67,7 @@ namespace PayFlow.web.V1.Controllers.Customer
         }
 
         [HttpDelete]
-        [Route("customer{id}")]
+        [Route("customer/{id}")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(Response<bool>))]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(SingleResponse))]

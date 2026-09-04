@@ -28,8 +28,9 @@ public class CustomerService : ICustomerService
     public async Task<bool> CustomerValidator(AddCustomersRequest request)
     {
         Helpers.Helpers.NameValidator(request.Name);
-        Helpers.Helpers.DocumentValidator(request.Document);
         Helpers.Helpers.EmailValidator(request.Email);
+        if (!Helpers.Helpers.DocumentValidator(request.Document))
+            throw new ExceptionValidation("Documento inválido.");
 
         if (await _customerRepository.DocumentExists(request.Document))
             throw new ExceptionValidation("Documento já cadastrado.");
