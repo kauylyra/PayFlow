@@ -62,6 +62,8 @@ public class PaymentRepository : IPaymentRepository
     public async Task<IEnumerable<Payments>> GetPaymentsAsync(FilterPayment request)
     {
         var query = _context.Payments
+            .Include(x=>x.Customers)
+            .Include(x=>x.PaymentMethod)
             .AsNoTracking()
             .AsQueryable();
 
@@ -75,7 +77,7 @@ public class PaymentRepository : IPaymentRepository
             query = query.Where(x => x.Status == request.status);
 
         return await query
-            .OrderByDescending(x => x.CreatedAt)
+            .OrderBy(x => x.Id)
             .Skip(((request.page ?? 1) - 1) * (request.pageSize ?? 20))
             .Take(request.pageSize ?? 20)
             .ToListAsync();

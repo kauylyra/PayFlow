@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using PayFlow.application.Crosscuttint.Dtos;
 using PayFlow.application.Crosscuttint.Dtos.Request.Payments;
+using PayFlow.application.Crosscuttint.Dtos.Response.Customers;
 using PayFlow.application.Crosscuttint.Dtos.Response.Payments;
 using PayFlow.application.Interfaces.Payment;
 using PayFlow.domain.Interfaces.Customer;
@@ -54,29 +55,40 @@ public class PaymentService : IPaymentService
         return ret;
     }
 
-    public async Task<PaginationResponse<IEnumerable<PaymentsResponse>>> GetPaymentAsync(
+    public async Task<PaginationResponse<PaymentListResponse>> GetPaymentAsync(
     FilterPaymentRequest request)
     {
         var currentPage = request.page ?? 1;
         var currentPageSize = request.pageSize ?? 20;
 
-        var payments = await _paymentRepository.GetPaymentsAsync(
-            new FilterPayment
-            {
-                customerId = request.customerId,
-                paymentMethodId = request.paymentMethodId,
-                status = request.status,
-                page = currentPage,
-                pageSize = currentPageSize
-            });
-
-        var totalRecords = await _paymentRepository.PaymentsCountAsync(_mapper.Map<FilterPayment>(request));
-
-        var result = _mapper.Map<IEnumerable<PaymentsResponse>>(payments);
-
-        return new PaginationResponse<IEnumerable<PaymentsResponse>>
+        var filter = new FilterPayment
         {
-            Resultado = result,
+            customerId = request.customerId,
+            paymentMethodId = request.paymentMethodId,
+            status = request.status,
+            page = currentPage,
+            pageSize = currentPageSize
+        };
+
+        var payments = await _paymentRepository.GetPaymentsAsync(filter);
+
+        var totalRecords = await _paymentRepository.PaymentsCountAsync(filter);
+
+        var result = _mapper.Map<List<PaymentItemResponse>>(payments);
+
+        var customer = payments
+            .Select(x => x.Customers)
+            .FirstOrDefault();
+
+        var response = new PaymentListResponse
+        {
+            Customer = _mapper.Map<CustomerPaymentResponse>(customer),
+            Payments = result
+        };
+
+        return new PaginationResponse<PaymentListResponse>
+        {
+            Resultado = response,
             TamanhoPagina = currentPageSize,
             TotalRegistros = totalRecords,
             pagina = currentPage
@@ -120,4 +132,6 @@ public class PaymentService : IPaymentService
         return await _paymentRepository
             .UpdatePaymentStatusAsync(id, "CANCELLED");
     }
+
+    
 }

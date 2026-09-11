@@ -10,13 +10,13 @@ public interface IPaymentService
     /// <summary>
     /// Adiciona um pagamento
     /// </summary>
-    /// <param name="dados"> Dados da requisição, passados pelo usuário </param>
-    /// <returns> AddPaymentResponse </returns>
+    /// <param name="dados">Dados da requisição, passados pelo usuário</param>
+    /// <returns>AddPaymentResponse</returns>
     Task<int> AddPaymentAsync(AddPaymentRequest dados);
 
     Task<PaymentsResponse> GetPaymentByIdAsync(int id_payment);
 
-    Task<PaginationResponse<IEnumerable<PaymentsResponse>>> GetPaymentAsync(FilterPaymentRequest request);
+    Task<PaginationResponse<PaymentListResponse>> GetPaymentAsync(FilterPaymentRequest request);
 
     Task<bool> ApprovePaymentAsync(int id);
 

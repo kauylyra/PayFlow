@@ -9,7 +9,4 @@ public class PaymentMethodResponse
     public string? Description { get; set; }
 
     public bool IsActive { get; set; }
-
-    // Relacionamento 1:N
-    public ICollection<PaymentsResponse> Payments { get; set; } = new List<PaymentsResponse>();
 }

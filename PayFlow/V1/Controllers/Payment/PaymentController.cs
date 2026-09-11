@@ -52,13 +52,15 @@ namespace PayFlow.web.V1.Controllers.Pay
 
         [HttpGet]
         [Route("payments")]
-        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(Response<IEnumerable<PaymentsResponse>>))]
+        [ProducesResponseType(
+     StatusCodes.Status200OK,Type = typeof(Response<PaymentListResponse>))]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(SingleResponse))]
-        public async Task<ActionResult<PaginationResponse<IEnumerable<PaymentsResponse>>>> GetPaymentAsync([FromQuery] FilterPaymentRequest request)
+        [ProducesResponseType(StatusCodes.Status400BadRequest,Type = typeof(SingleResponse))]
+        public async Task<ActionResult<PaginationResponse<PaymentListResponse>>> GetPaymentAsync([FromQuery] FilterPaymentRequest request)
         {
             var resultado = await _paymentService.GetPaymentAsync(request);
-            return Ok(new Response<PaginationResponse<IEnumerable<PaymentsResponse>>>{result = resultado});
+
+            return Ok(new Response<PaymentListResponse>{result = resultado.Resultado});
         }
 
         [HttpPost]
