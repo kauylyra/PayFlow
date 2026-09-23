@@ -16,7 +16,7 @@ public interface IPaymentRepository
 
     Task<PaymentMethod> GetPaymentByMethodIdAsync(int paymentMethodId);
 
-    Task<Payments> GetPaymentsByIdCustomerAsync(int customerId);
+    Task<bool> CustomerHasPaymentsAsync(int customerId);
 
     Task<IEnumerable<Payments>> GetPaymentsAsync(FilterPayment request);
 

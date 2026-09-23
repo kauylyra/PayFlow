@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.Extensions.Logging;
 using PayFlow.application.Crosscuttint.Dtos;
 using PayFlow.application.Crosscuttint.Dtos.Request.Customers;
 using PayFlow.application.Crosscuttint.Dtos.Response.Customers;
@@ -15,20 +16,25 @@ public class CustomerService : ICustomerService
     private readonly ICustomerRepository _customerRepository;
     private readonly IPaymentRepository _paymentRepository;
     private readonly IMapper _mapper;
+    private readonly ILogger<CustomerService> _logger;
     public CustomerService(ICustomerRepository customerRepository
         , IPaymentRepository paymentRepository
-        , IMapper mapper)
+        , IMapper mapper
+        , ILogger<CustomerService> logger)
     {
         _customerRepository = customerRepository;
         _paymentRepository = paymentRepository;
         _mapper = mapper;
+        _logger = logger;
     }
 
     #region Validators
-    public async Task<bool> CustomerValidator(AddCustomersRequest request)
+    private async Task ValidateCustomerAsync(AddCustomersRequest request)
     {
         Helpers.Helpers.NameValidator(request.Name);
-        Helpers.Helpers.EmailValidator(request.Email);
+        if (!Helpers.Helpers.EmailValidator(request.Email))
+            throw new ExceptionValidation("Email inválido.");
+
         if (!Helpers.Helpers.DocumentValidator(request.Document))
             throw new ExceptionValidation("Documento inválido.");
 
@@ -37,29 +43,39 @@ public class CustomerService : ICustomerService
 
         if (await _customerRepository.EmailExists(request.Email))
             throw new ExceptionValidation("Email já cadastrado.");
+    }
 
-        return true;
+    private static void ValidateId(int id)
+    {
+        if (id <= 0)
+            throw new ExceptionValidation($"Id inválido: {id}");
     }
     #endregion
 
 
     public async Task<int> AddCustomerAsync(AddCustomersRequest request)
     {
-        await CustomerValidator(request);
-        var addCustomer = _mapper.Map<Customers>(request);
-        var ret = await _customerRepository.AddCustomerAsync(addCustomer);
+        await ValidateCustomerAsync(request);
 
-        return ret;
+        var customer = _mapper.Map<Customers>(request);
+
+        var customerId = await _customerRepository.AddCustomerAsync(customer);
+
+        _logger.LogInformation($"Customer {customerId} criado com sucesso.");
+
+        return customerId;
     }
+
     public async Task<CustomersResponse> GetCustomerByIdAsync(int id)
     {
-        if (id == 0)
-            throw new ExceptionValidation($"id inválido : {id}");
+        ValidateId(id);
 
-        var Customer = await _customerRepository.GetCustomerByIdAsync(id);
+        var customer = await _customerRepository.GetCustomerByIdAsync(id);
 
-        var ret = _mapper.Map<CustomersResponse>(Customer);
-        return ret;
+        if (customer is null)
+            throw new KeyNotFoundException("Customer não encontrado.");
+
+        return _mapper.Map<CustomersResponse>(customer);
     }
 
     public async Task<PaginationResponse<IEnumerable<CustomersResponse>>> GetCustomersAsync(int? page, int? pageSize)
@@ -81,22 +97,27 @@ public class CustomerService : ICustomerService
     }
     public async Task<bool> UpdateCustomerAsync(int id, UpdateCustomerRequest request)
     {
-        if (id == 0)
-            throw new ExceptionValidation($"id inválido : {id}");
+        ValidateId(id);
 
         Helpers.Helpers.NameValidator(request.Name);
-        Helpers.Helpers.DocumentValidator(request.Document);
-        Helpers.Helpers.EmailValidator(request.Email);
+        if (!Helpers.Helpers.EmailValidator(request.Email))
+            throw new ExceptionValidation("Email inválido.");
+
+        if (!Helpers.Helpers.DocumentValidator(request.Document))
+            throw new ExceptionValidation("Documento inválido.");
 
         var customer = await _customerRepository.GetCustomerByIdAsync(id);
+
         if (customer is null)
-            throw new ExceptionValidation("Customer não encontrado.");
+            throw new KeyNotFoundException("Customer não encontrado.");
 
         if (await _customerRepository.EmailExistsOtherCustomer(id, request.Email))
-            throw new ExceptionValidation($"Email cadastrado para outro usuário.");
+            throw new ExceptionValidation(
+                "Email cadastrado para outro usuário.");
 
         if (await _customerRepository.DocumentExistsOtherCustomer(id, request.Document))
-            throw new ExceptionValidation($"Documento cadastrado para outro usuário.");
+            throw new ExceptionValidation(
+                "Documento cadastrado para outro usuário.");
 
         customer.Name = request.Name;
         customer.Email = request.Email;
@@ -109,16 +130,16 @@ public class CustomerService : ICustomerService
 
     public async Task<bool> DeleteCustomerAsync(int id)
     {
-        if (id == 0)
-            throw new ExceptionValidation($"id inválido : {id}");
+        ValidateId(id);
 
         var customer = await _customerRepository.GetCustomerByIdAsync(id);
-        if (customer is null)
-            throw new ExceptionValidation("Customer não encontrado.");
 
-        var paymentCustomer = await _paymentRepository.GetPaymentsByIdCustomerAsync(id);
-        if (paymentCustomer is not null)
-            throw new ExceptionValidation("Este Customer tem um pagamento registrado.");
+        if (customer is null)
+            throw new KeyNotFoundException("Customer não encontrado.");
+
+        if (await _paymentRepository.CustomerHasPaymentsAsync(id))
+            throw new InvalidOperationException(
+                "Não é possível excluir um Customer que possui pagamentos.");
 
         await _customerRepository.DeleteCustomerAsync(customer);
 

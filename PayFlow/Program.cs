@@ -1,10 +1,12 @@
 using Asp.Versioning;
-using AutoMapper;
+using HealthChecks.UI.Client;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using PayFlow.application.DI;
 using PayFlow.application.Mapping;
 using PayFlow.Infra.Context;
-using PayFlow.web.Middlewares;
+using PayFlow.web.Middleware;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +16,20 @@ ConfigRepositories.ConfigureDependenciesRepositories(builder.Services);
 builder.Services.AddDbContext<PayFlowDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("stringConnection")));
+
+var connectionString =
+    builder.Configuration.GetConnectionString("stringConnection");
+
+builder.Host.UseSerilog((context, configuration) =>
+{
+    configuration
+        .ReadFrom.Configuration(context.Configuration)
+        .WriteTo.Console();
+});
+
+builder.Services
+    .AddHealthChecks()
+    .AddSqlServer(connectionString);
 
 builder.Services.AddAutoMapper(cfg =>
 {
@@ -48,8 +64,6 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-app.UseMiddleware<ExceptionMiddleware>();
-
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -60,10 +74,16 @@ app.UseCors("PayflowApp");
 
 app.UseHttpsRedirection();
 
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+});
 
 app.Run();
 

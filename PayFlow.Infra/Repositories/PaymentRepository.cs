@@ -36,9 +36,9 @@ public class PaymentRepository : IPaymentRepository
         return await _context.PaymentMethods.Where(x => x.Id == paymentMethodId).FirstOrDefaultAsync();
     }
 
-    public async Task<Payments> GetPaymentsByIdCustomerAsync(int customerId)
+    public async Task<bool> CustomerHasPaymentsAsync(int customerId)
     {
-        return await _context.Payments.Where(x => x.CustomerId == customerId).FirstOrDefaultAsync();
+        return await _context.Payments.AnyAsync(x => x.CustomerId == customerId);
     }
 
     public async Task<int> PaymentsCountAsync(FilterPayment request)

@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.Extensions.Logging;
 using PayFlow.application.Crosscuttint.Dtos;
 using PayFlow.application.Crosscuttint.Dtos.Request.Payments;
 using PayFlow.application.Crosscuttint.Dtos.Response.Customers;
@@ -16,11 +17,13 @@ public class PaymentService : IPaymentService
     private readonly IPaymentRepository _paymentRepository;
     private readonly ICustomerRepository _customerFlowRepository;
     private readonly IMapper _mapper;
-    public PaymentService(IPaymentRepository payFlowRepository, ICustomerRepository customerRepository, IMapper mapper)
+    private readonly ILogger<PaymentService> _logger;
+    public PaymentService(IPaymentRepository payFlowRepository, ICustomerRepository customerRepository, IMapper mapper, ILogger<PaymentService> logger)
     {
         _paymentRepository = payFlowRepository;
         _customerFlowRepository = customerRepository;
         _mapper = mapper;
+        _logger = logger;
     }
 
     public async Task<int> AddPaymentAsync(AddPaymentRequest dados)
@@ -42,8 +45,9 @@ public class PaymentService : IPaymentService
         addPayment.CreatedAt = DateTime.UtcNow;
         addPayment.Status = "PENDING";
 
-        var ret = await _paymentRepository.AddPaymentAsync(addPayment);
-        return ret;
+        var paymentId = await _paymentRepository.AddPaymentAsync(addPayment);
+        _logger.LogInformation($"Payment {paymentId} criado com sucesso.");
+        return paymentId;
     }
 
     public async Task<PaymentsResponse> GetPaymentByIdAsync(int id_payment)
