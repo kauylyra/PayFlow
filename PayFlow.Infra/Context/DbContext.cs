@@ -17,6 +17,8 @@ public class PayFlowDbContext : DbContext
 
     public DbSet<PaymentMethod> PaymentMethods => Set<PaymentMethod>();
 
+    public DbSet<PaymentIdempotency> PaymentIdempotencies => Set<PaymentIdempotency>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -64,6 +66,9 @@ public class PayFlowDbContext : DbContext
                 .HasMaxLength(30)
                 .IsRequired();
 
+            //entity.Property<byte[]>("RowVersion")
+            //    .IsRowVersion();
+
             entity.Property(x => x.Description)
                 .HasMaxLength(500);
 
@@ -91,6 +96,16 @@ public class PayFlowDbContext : DbContext
 
             entity.HasIndex(x => x.Name)
                 .IsUnique();
+        });
+
+        modelBuilder.Entity<PaymentIdempotency>(entity =>
+        {
+            entity.ToTable("PaymentIdempotencies");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Key).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Operation).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.RequestHash).HasMaxLength(64).IsRequired();
+            entity.HasIndex(x => new { x.Key, x.Operation }).IsUnique();
         });
     }
 }

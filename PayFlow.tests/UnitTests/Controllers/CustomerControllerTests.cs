@@ -48,8 +48,8 @@ public sealed class CustomerControllerTests
         var response = await _controller.GetCustomersAsync(2, 5);
 
         var result = Assert.IsType<OkObjectResult>(response.Result);
-        var body = Assert.IsType<Response<PaginationResponse<IEnumerable<CustomersResponse>>>>(result.Value);
-        Assert.Equal(1, body.result.TotalRegistros);
+        var body = Assert.IsType<Response<IEnumerable<CustomersResponse>>>(result.Value);
+        Assert.Single(body.result);
         Assert.Equal(2, _customerService.LastPage);
         Assert.Equal(5, _customerService.LastPageSize);
     }

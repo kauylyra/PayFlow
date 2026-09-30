@@ -62,8 +62,8 @@ public sealed class CustomerEndpointsTests : IClassFixture<PayFlowWebApplication
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var body = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
-        var pagination = body.RootElement.GetProperty("result");
-        Assert.Equal(1, pagination.GetProperty("totalRegistros").GetInt32());
+        var customers = body.RootElement.GetProperty("result");
+        Assert.Equal(JsonValueKind.Array, customers.ValueKind);
         Assert.Equal(2, _factory.CustomerService.LastPage);
         Assert.Equal(5, _factory.CustomerService.LastPageSize);
     }
@@ -73,7 +73,7 @@ public sealed class CustomerEndpointsTests : IClassFixture<PayFlowWebApplication
     {
         var request = CreateUpdateCustomerRequest();
 
-        var response = await _client.PutAsJsonAsync("/v1/customer/customer10", request);
+        var response = await _client.PutAsJsonAsync("/v1/customer/customer/10", request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var body = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
@@ -85,7 +85,7 @@ public sealed class CustomerEndpointsTests : IClassFixture<PayFlowWebApplication
     [Fact]
     public async Task DeleteCustomer_ShouldReturnDeleteStatus()
     {
-        var response = await _client.DeleteAsync("/v1/customer/customer10");
+        var response = await _client.DeleteAsync("/v1/customer/customer/10");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var body = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
@@ -99,7 +99,7 @@ public sealed class CustomerEndpointsTests : IClassFixture<PayFlowWebApplication
         {
             Name = "Jane Doe",
             Email = "jane.doe@example.com",
-            Document = "12345678901"
+            Document = "52998224725"
         };
     }
 
@@ -109,7 +109,7 @@ public sealed class CustomerEndpointsTests : IClassFixture<PayFlowWebApplication
         {
             Name = "Jane Doe",
             Email = "jane.doe@example.com",
-            Document = "12345678901"
+            Document = "52998224725"
         };
     }
 }

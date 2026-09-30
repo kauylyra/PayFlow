@@ -6,23 +6,29 @@ using PayFlow.application.Crosscuttint.Dtos.Response.Payments;
 using PayFlow.domain.Models.Payment;
 using PayFlow.Domain.Entities;
 
-namespace PayFlow.application.Mapping;
-
 public class MappingToDto : Profile
 {
     public MappingToDto()
     {
         CreateMap<Customers, AddCustomersRequest>().ReverseMap();
 
-        CreateMap<Customers, CustomersResponse>().ReverseMap();
+        CreateMap<Customers, CustomersResponse>();
 
         CreateMap<Customers, UpdateCustomerRequest>().ReverseMap();
 
         CreateMap<Payments, AddPaymentRequest>().ReverseMap();
 
-        CreateMap<Payments, CustomerPaymentResponse>();
-
         CreateMap<Payments, PaymentItemResponse>();
+
+        CreateMap<Payments, PaymentsResponse>()
+            .ForMember(
+                dest => dest.Customer,
+                opt => opt.MapFrom(src => src.Customers)
+            )
+            .ForMember(
+                dest => dest.PaymentMethod,
+                opt => opt.MapFrom(src => src.PaymentMethod)
+            );
 
         CreateMap<Customers, CustomerPaymentResponse>();
 

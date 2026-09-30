@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using Microsoft.Extensions.Logging;
 using PayFlow.application.Crosscuttint.Dtos;
 using PayFlow.application.Crosscuttint.Dtos.Request.Payments;
@@ -9,133 +9,111 @@ using PayFlow.domain.Interfaces.Customer;
 using PayFlow.domain.Interfaces.Payment;
 using PayFlow.domain.Models;
 using PayFlow.domain.Models.Payment;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 
 namespace PayFlow.application.Services;
 
 public class PaymentService : IPaymentService
 {
     private readonly IPaymentRepository _paymentRepository;
-    private readonly ICustomerRepository _customerFlowRepository;
+    private readonly ICustomerRepository _customerRepository;
     private readonly IMapper _mapper;
     private readonly ILogger<PaymentService> _logger;
-    public PaymentService(IPaymentRepository payFlowRepository, ICustomerRepository customerRepository, IMapper mapper, ILogger<PaymentService> logger)
+
+    public PaymentService(IPaymentRepository paymentRepository, ICustomerRepository customerRepository,
+        IMapper mapper, ILogger<PaymentService> logger)
     {
-        _paymentRepository = payFlowRepository;
-        _customerFlowRepository = customerRepository;
+        _paymentRepository = paymentRepository;
+        _customerRepository = customerRepository;
         _mapper = mapper;
         _logger = logger;
     }
 
     public async Task<int> AddPaymentAsync(AddPaymentRequest dados)
     {
-        var customer = await _customerFlowRepository.GetCustomerByIdAsync(dados.CustomerId);
-        if (customer is null)
+        if (await _customerRepository.GetCustomerByIdAsync(dados.CustomerId) is null)
             throw new ExceptionValidation("Customer não encontrado.");
-
-        var methodPayment = await _paymentRepository.GetPaymentByMethodIdAsync(dados.PaymentMethodId);
-        if (methodPayment is null)
-            throw new ExceptionValidation("Pagamento não encontrado.");
-
-        if (dados.Amount <= 0)
-            throw new ExceptionValidation("Customer não encontrado.");
-        if (dados.Amount != Math.Round(dados.Amount, 2))
-            throw new ExceptionValidation("O valor deve possuir no máximo 2 casas decimais.");
-
-        var addPayment = _mapper.Map<Payments>(dados);
-        addPayment.CreatedAt = DateTime.UtcNow;
-        addPayment.Status = "PENDING";
-
-        var paymentId = await _paymentRepository.AddPaymentAsync(addPayment);
-        _logger.LogInformation($"Payment {paymentId} criado com sucesso.");
+        if (await _paymentRepository.GetPaymentByMethodIdAsync(dados.PaymentMethodId) is null)
+            throw new ExceptionValidation("Método de pagamento não encontrado.");
+        var payment = _mapper.Map<Payments>(dados);
+        payment.CreatedAt = DateTime.UtcNow;
+        payment.Status = "PENDING";
+        var paymentId = await _paymentRepository.AddPaymentAsync(payment);
+        _logger.LogInformation("Payment {PaymentId} criado com sucesso.", paymentId);
         return paymentId;
     }
 
-    public async Task<PaymentsResponse> GetPaymentByIdAsync(int id_payment)
+    public async Task<int> AddPaymentAsync(AddPaymentRequest dados, string idempotencyKey)
     {
-        var payment = await _paymentRepository.GetPaymentByIdAsync(id_payment);
-        if (payment is null)
-            throw new ExceptionValidation("Pagamento não encontrado.");
-        var ret = _mapper.Map<PaymentsResponse>(payment);
-        return ret;
+        const string operation = "POST:/v1/payment/payments";
+        var requestHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(dados))));
+        var existing = await _paymentRepository.GetPaymentIdempotencyAsync(idempotencyKey, operation);
+        if (existing is not null)
+        {
+            if (existing.RequestHash != requestHash)
+                throw new InvalidOperationException("A chave de idempotência já foi usada com outro payload.");
+            return existing.PaymentId;
+        }
+
+        if (await _customerRepository.GetCustomerByIdAsync(dados.CustomerId) is null)
+            throw new ExceptionValidation("Customer não encontrado.");
+        if (await _paymentRepository.GetPaymentByMethodIdAsync(dados.PaymentMethodId) is null)
+            throw new ExceptionValidation("Método de pagamento não encontrado.");
+
+        var payment = _mapper.Map<Payments>(dados);
+        payment.CreatedAt = DateTime.UtcNow;
+        payment.Status = "PENDING";
+        var id = await _paymentRepository.AddPaymentWithIdempotencyAsync(payment, new PaymentIdempotency
+        {
+            Key = idempotencyKey,
+            Operation = operation,
+            RequestHash = requestHash
+        });
+        _logger.LogInformation("Payment {PaymentId} criado com idempotência.", id);
+        return id;
     }
 
-    public async Task<PaginationResponse<PaymentListResponse>> GetPaymentAsync(
-    FilterPaymentRequest request)
+    public async Task<PaymentsResponse> GetPaymentByIdAsync(int idPayment)
     {
-        var currentPage = request.page ?? 1;
-        var currentPageSize = request.pageSize ?? 20;
+        var payment = await _paymentRepository.GetPaymentByIdAsync(idPayment);
+        if (payment is null)
+            throw new KeyNotFoundException("Pagamento não encontrado.");
+        return _mapper.Map<PaymentsResponse>(payment);
+    }
 
-        var filter = new FilterPayment
-        {
-            customerId = request.customerId,
-            paymentMethodId = request.paymentMethodId,
-            status = request.status,
-            page = currentPage,
-            pageSize = currentPageSize
-        };
-
+    public async Task<PaginationResponse<PaymentListResponse>> GetPaymentAsync(FilterPaymentRequest request)
+    {
+        var filter = new FilterPayment { customerId = request.customerId, paymentMethodId = request.paymentMethodId, status = request.status, page = request.page ?? 1, pageSize = request.pageSize ?? 20 };
         var payments = await _paymentRepository.GetPaymentsAsync(filter);
-
-        var totalRecords = await _paymentRepository.PaymentsCountAsync(filter);
-
-        var result = _mapper.Map<List<PaymentItemResponse>>(payments);
-
-        var customer = payments
-            .Select(x => x.Customers)
-            .FirstOrDefault();
-
         var response = new PaymentListResponse
         {
-            Customer = _mapper.Map<CustomerPaymentResponse>(customer),
-            Payments = result
+            Customer = _mapper.Map<CustomerPaymentResponse>(payments.Select(x => x.Customers).FirstOrDefault()),
+            Payments = _mapper.Map<List<PaymentItemResponse>>(payments)
         };
-
         return new PaginationResponse<PaymentListResponse>
         {
             Resultado = response,
-            TamanhoPagina = currentPageSize,
-            TotalRegistros = totalRecords,
-            pagina = currentPage
+            TamanhoPagina = filter.page.Value,
+            TotalRegistros = await _paymentRepository.PaymentsCountAsync(filter),
+            pagina = filter.page.Value
         };
     }
 
-    private bool IsValidStatusTransition(
-    string currentStatus,
-    string newStatus)
-    {
-        return currentStatus == "PENDING"
-            && (newStatus == "APPROVED" || newStatus == "CANCELLED");
-    }
+    public async Task<bool> ApprovePaymentAsync(int id) => await ChangePaymentStatusAsync(id, "APPROVED", "aprovado");
 
-    public async Task<bool> ApprovePaymentAsync(int id)
+    public async Task<bool> CancelPaymentAsync(int id) => await ChangePaymentStatusAsync(id, "CANCELLED", "cancelado");
+
+    private async Task<bool> ChangePaymentStatusAsync(int id, string status, string action)
     {
         var payment = await _paymentRepository.GetPaymentByIdAsync(id);
-
-        if (payment == null)
+        if (payment is null)
             throw new KeyNotFoundException("Pagamento não encontrado.");
-
-        if (!IsValidStatusTransition(payment.Status, "APPROVED"))
-            throw new InvalidOperationException(
-                "O pagamento não pode ser aprovado neste status.");
-
-        return await _paymentRepository
-            .UpdatePaymentStatusAsync(id, "APPROVED");
+        if (payment.Status != "PENDING")
+            throw new InvalidOperationException($"O pagamento não pode ser {action} neste status.");
+        var result = await _paymentRepository.UpdatePaymentStatusAsync(id, status);
+        _logger.LogInformation("Payment {PaymentId} {Action}.", id, action);
+        return result;
     }
-
-    public async Task<bool> CancelPaymentAsync(int id)
-    {
-        var payment = await _paymentRepository.GetPaymentByIdAsync(id);
-
-        if (payment == null)
-            throw new KeyNotFoundException("Pagamento não encontrado.");
-
-        if (!IsValidStatusTransition(payment.Status, "CANCELLED"))
-            throw new InvalidOperationException(
-                "O pagamento não pode ser cancelado neste status.");
-
-        return await _paymentRepository
-            .UpdatePaymentStatusAsync(id, "CANCELLED");
-    }
-
-    
 }

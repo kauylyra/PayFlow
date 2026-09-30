@@ -12,6 +12,10 @@ public interface IPaymentRepository
     /// <returns></returns>
     Task<int> AddPaymentAsync(Payments request);
 
+    Task<int> AddPaymentWithIdempotencyAsync(Payments payment, PaymentIdempotency idempotency);
+
+    Task<PaymentIdempotency?> GetPaymentIdempotencyAsync(string key, string operation);
+
     Task<Payments> GetPaymentByIdAsync(int id_payment);
 
     Task<PaymentMethod> GetPaymentByMethodIdAsync(int paymentMethodId);

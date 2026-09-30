@@ -26,9 +26,27 @@ public class PaymentRepository : IPaymentRepository
         return request.Id;
     }
 
+    public async Task<int> AddPaymentWithIdempotencyAsync(Payments payment, PaymentIdempotency idempotency)
+    {
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+        await _context.Payments.AddAsync(payment);
+        await _context.SaveChangesAsync();
+        idempotency.PaymentId = payment.Id;
+        idempotency.CreatedAt = DateTime.UtcNow;
+        await _context.PaymentIdempotencies.AddAsync(idempotency);
+        await _context.SaveChangesAsync();
+        await transaction.CommitAsync();
+        return payment.Id;
+    }
+
+    public Task<PaymentIdempotency?> GetPaymentIdempotencyAsync(string key, string operation)
+    {
+        return _context.PaymentIdempotencies.FirstOrDefaultAsync(x => x.Key == key && x.Operation == operation);
+    }
+
     public async Task<Payments> GetPaymentByIdAsync(int id_payment)
     {
-        return await _context.Payments.Include(x => x.Customers).FirstOrDefaultAsync(x => x.Id == id_payment);
+        return await _context.Payments.Include(x => x.Customers).Include(x => x.PaymentMethod).FirstOrDefaultAsync(x => x.Id == id_payment);
     }
 
     public async Task<PaymentMethod> GetPaymentByMethodIdAsync(int paymentMethodId)

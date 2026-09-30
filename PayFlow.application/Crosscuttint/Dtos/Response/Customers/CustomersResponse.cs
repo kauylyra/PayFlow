@@ -16,6 +16,5 @@ public class CustomersResponse
 
     public DateTime? UpdatedAt { get; set; }
 
-    // Relacionamento 1:N
-    public ICollection<CustomerPaymentResponse> Payments { get; set; } = new List<CustomerPaymentResponse>();
+    public ICollection<PaymentItemResponse> Payments { get; set; } = new List<PaymentItemResponse>();
 }
