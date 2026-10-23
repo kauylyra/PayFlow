@@ -12,6 +12,6 @@ public interface ICustomerRepository
     Task<bool> EmailExists(string email);
     Task<bool> EmailExistsOtherCustomer(int id, string email);
     Task<bool> DocumentExistsOtherCustomer(int id, string document);
-    Task<bool> UpdateCustomerAsync(Customers request);
-    Task<bool> DeleteCustomerAsync(Customers customer);
+    Task<bool> UpdateCustomerAsync(Customers request, CancellationToken cancellationToken);
+    Task<bool> DeleteCustomerAsync(Customers customer, CancellationToken cancellationToken);
 }

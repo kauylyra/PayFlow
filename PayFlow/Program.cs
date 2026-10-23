@@ -4,11 +4,14 @@ using HealthChecks.UI.Client;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
-using PayFlow.application.DI;
 using PayFlow.application.Crosscuttint.Dtos.Request.Customers;
 using PayFlow.application.Crosscuttint.Dtos.Request.Payments;
+using PayFlow.application.DI;
 using PayFlow.application.Validators;
+using PayFlow.Infra.Configuration;
 using PayFlow.Infra.Context;
+using PayFlow.Infra.Messaging;
+using PayFlow.Infra.Messaging.Interface;
 using PayFlow.web.Middleware;
 using Serilog;
 
@@ -32,6 +35,8 @@ builder.Services.AddControllers();
 builder.Services.AddScoped<IValidator<AddCustomersRequest>, AddCustomersRequestValidator>();
 builder.Services.AddScoped<IValidator<UpdateCustomerRequest>, UpdateCustomerRequestValidator>();
 builder.Services.AddScoped<IValidator<AddPaymentRequest>, AddPaymentRequestValidator>();
+builder.Services.Configure<RabbitMqOptions>(builder.Configuration.GetSection("RabbitMq"));
+
 
 builder.Services.AddApiVersioning(options =>
     {

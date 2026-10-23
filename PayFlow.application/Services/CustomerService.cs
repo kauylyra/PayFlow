@@ -4,10 +4,12 @@ using PayFlow.application.Crosscuttint.Dtos;
 using PayFlow.application.Crosscuttint.Dtos.Request.Customers;
 using PayFlow.application.Crosscuttint.Dtos.Response.Customers;
 using PayFlow.application.Interfaces.Customer;
+using PayFlow.domain.Contracts;
 using PayFlow.domain.Interfaces.Customer;
 using PayFlow.domain.Interfaces.Payment;
 using PayFlow.domain.Models;
 using PayFlow.Domain.Entities;
+using PayFlow.Infra.Messaging.Interface;
 
 namespace PayFlow.application.Services;
 
@@ -17,14 +19,16 @@ public class CustomerService : ICustomerService
     private readonly IPaymentRepository _paymentRepository;
     private readonly IMapper _mapper;
     private readonly ILogger<CustomerService> _logger;
+    private readonly IEventPublisher _eventPublisher;
 
     public CustomerService(ICustomerRepository customerRepository, IPaymentRepository paymentRepository,
-        IMapper mapper, ILogger<CustomerService> logger)
+        IMapper mapper, ILogger<CustomerService> logger, IEventPublisher eventPublisher)
     {
         _customerRepository = customerRepository;
         _paymentRepository = paymentRepository;
         _mapper = mapper;
         _logger = logger;
+        _eventPublisher = eventPublisher;
     }
 
     private async Task ValidateCustomerAsync(AddCustomersRequest request)
@@ -41,10 +45,19 @@ public class CustomerService : ICustomerService
             throw new ExceptionValidation($"Id inválido: {id}");
     }
 
-    public async Task<int> AddCustomerAsync(AddCustomersRequest request)
+    public async Task<int> AddCustomerAsync(AddCustomersRequest request, CancellationToken cancellationToken)
     {
         await ValidateCustomerAsync(request);
         var customerId = await _customerRepository.AddCustomerAsync(_mapper.Map<Customers>(request));
+        var customerEvent = new CustomerRegisteredEvent
+        {
+            EventId = Guid.NewGuid(),
+            Id = customerId,
+            Name = request.Name,
+            Email = request.Email,
+            CreatedAt = DateTime.UtcNow
+        };
+        await _eventPublisher.PublishAsync(customerEvent, "customer.registered", cancellationToken);
         _logger.LogInformation("Customer {CustomerId} criado com sucesso.", customerId);
         return customerId;
     }
@@ -72,7 +85,7 @@ public class CustomerService : ICustomerService
         };
     }
 
-    public async Task<bool> UpdateCustomerAsync(int id, UpdateCustomerRequest request)
+    public async Task<bool> UpdateCustomerAsync(int id, UpdateCustomerRequest request, CancellationToken cancellationToken)
     {
         ValidateId(id);
         var customer = await _customerRepository.GetCustomerByIdAsync(id);
@@ -85,12 +98,12 @@ public class CustomerService : ICustomerService
         customer.Name = request.Name;
         customer.Email = request.Email;
         customer.Document = request.Document;
-        await _customerRepository.UpdateCustomerAsync(customer);
+        await _customerRepository.UpdateCustomerAsync(customer, cancellationToken);
         _logger.LogInformation("Customer {CustomerId} atualizado com sucesso.", id);
         return true;
     }
 
-    public async Task<bool> DeleteCustomerAsync(int id)
+    public async Task<bool> DeleteCustomerAsync(int id, CancellationToken cancellationToken)
     {
         ValidateId(id);
         var customer = await _customerRepository.GetCustomerByIdAsync(id);
@@ -98,7 +111,7 @@ public class CustomerService : ICustomerService
             throw new KeyNotFoundException("Customer não encontrado.");
         if (await _paymentRepository.CustomerHasPaymentsAsync(id))
             throw new InvalidOperationException("Não é possível excluir um Customer que possui pagamentos.");
-        await _customerRepository.DeleteCustomerAsync(customer);
+        await _customerRepository.DeleteCustomerAsync(customer, cancellationToken);
         _logger.LogInformation("Customer {CustomerId} excluído com sucesso.", id);
         return true;
     }

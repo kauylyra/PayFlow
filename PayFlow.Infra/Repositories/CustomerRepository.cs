@@ -62,7 +62,7 @@ public class CustomerRepository : DbContext, ICustomerRepository
         return await _context.Customers.AnyAsync(x => x.Document == document && x.Id != id);
     }
 
-    public async Task<bool> UpdateCustomerAsync(Customers request)
+    public async Task<bool> UpdateCustomerAsync(Customers request, CancellationToken cancellationToken)
     {
         request.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
@@ -70,7 +70,7 @@ public class CustomerRepository : DbContext, ICustomerRepository
         return true;
     }
 
-    public async Task<bool> DeleteCustomerAsync(Customers request)
+    public async Task<bool> DeleteCustomerAsync(Customers request, CancellationToken cancellationToken)
     {
         _context.Customers.Remove(request);
 

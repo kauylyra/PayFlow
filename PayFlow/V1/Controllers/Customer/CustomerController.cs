@@ -29,11 +29,11 @@ public class CustomerController : Controller
     [HttpPost("customers")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(Response<AddCustomerResponse>))]
     [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ProblemDetails))]
-    public async Task<ActionResult<Response<IEnumerable<AddCustomerResponse>>>> AddCustomerAsync(AddCustomersRequest dados)
+    public async Task<ActionResult<Response<IEnumerable<AddCustomerResponse>>>> AddCustomerAsync(AddCustomersRequest dados, CancellationToken cancellationToken)
     {
         if (_addCustomerValidator is not null)
             await _addCustomerValidator.ValidateAndThrowAsync(dados);
-        var result = await _customerService.AddCustomerAsync(dados);
+        var result = await _customerService.AddCustomerAsync(dados, cancellationToken);
         return Ok(new Response<int> { result = result });
     }
 
@@ -59,11 +59,11 @@ public class CustomerController : Controller
     [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ProblemDetails))]
     [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ProblemDetails))]
     [ProducesResponseType(StatusCodes.Status409Conflict, Type = typeof(ProblemDetails))]
-    public async Task<ActionResult<Response<bool>>> UpdateCustomerAsync(int id, UpdateCustomerRequest request)
+    public async Task<ActionResult<Response<bool>>> UpdateCustomerAsync(int id, UpdateCustomerRequest request, CancellationToken cancellationToken)
     {
         if (_updateCustomerValidator is not null)
             await _updateCustomerValidator.ValidateAndThrowAsync(request);
-        var result = await _customerService.UpdateCustomerAsync(id, request);
+        var result = await _customerService.UpdateCustomerAsync(id, request, cancellationToken);
         return Ok(new Response<bool> { result = result });
     }
 
@@ -71,9 +71,9 @@ public class CustomerController : Controller
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(Response<bool>))]
     [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ProblemDetails))]
     [ProducesResponseType(StatusCodes.Status409Conflict, Type = typeof(ProblemDetails))]
-    public async Task<ActionResult<Response<bool>>> DeleteCustomerAsync(int id)
+    public async Task<ActionResult<Response<bool>>> DeleteCustomerAsync(int id, CancellationToken cancellationToken)
     {
-        var result = await _customerService.DeleteCustomerAsync(id);
+        var result = await _customerService.DeleteCustomerAsync(id, cancellationToken);
         return Ok(new Response<bool> { result = result });
     }
 }
